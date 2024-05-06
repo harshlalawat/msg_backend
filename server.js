@@ -2,7 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const socketIO = require('socket.io');
-const sio_redis = require('socket.io-redis');
+
+const {createClient} = require('redis');
+const {createAdapter} = require("@socket.io/redis-adapter");
 const path = require('path');
 const cookieParser = require('cookie-parser');
 
@@ -18,6 +20,11 @@ const configVar = require('./config/configVars');
 
 const app = express();
 const server = require('http').Server(app);
+
+app.use(function(req, res, next){
+	console.log(req.method, req.url);
+	next();
+})
 
 const { connectRedis } = require('./config/redis');
 global.redisClient = connectRedis();
@@ -51,43 +58,51 @@ app.use('/api-docs', require('./swagger'))
 
 app.use(cookieParser());
 
-io = require('socket.io')(server, {
-	cors: {
-		origin: "localhost",
-		methods: ["GET", "POST"],
-		credentials: true,
-	},
-});
-io.adapter(sio_redis({host: 'localhost', port: 6379}));
-
-io.use( async (socket, next) => {
-	try {
-		let cookies = cookie.parse(socket.request.headers.cookie);
-		const sessionObj = await authController.authenticateSession(cookies?.jwt);
-		if ( ! sessionObj )		throw new Error("Request is not authenticated");
-		socket.userData = sessionObj;
-		//console.log("Socket user data = ", userData);
-		next();	
-	} catch (e) {
-		console.log(e)
-		next({ error : "Invalid socket request"})
-		return ;
-	}
-})
-
-io.on('connection', (socket) => {
-	//console.log('a user connected');
-	let userId = socket.userData && socket.userData.userId;
-	let socketId = socket.id;
-	socket.join(userId);
-	socket.on('disconnect', () => {
-		//console.log('user disconnected');
-		socket.leave(userId);
-		channelController.setLastSeenOnSocketDisconnection({userId, socketId})
+const pubClient = createClient({url: "redis://localhost:6379"});
+const subClient = pubClient.duplicate();
+Promise.all([pubClient.connect(), subClient.connect()])
+.then(function(){
+	global.io = new socketIO.Server({
+		adapter: createAdapter(pubClient, subClient)
 	});
-	socketRoutes(socket, io);
+	io.listen(server, {
+		cors: {
+			origin: "localhost",
+			methods: ["GET", "POST"],
+			credentials: true,
+		},
+	});
+	io.use( async (socket, next) => {
+		try {
+			let cookies = cookie.parse(socket.request.headers.cookie);
+			const sessionObj = await authController.authenticateSession(cookies?.jwt);
+			if ( ! sessionObj )		throw new Error("Request is not authenticated");
+			socket.userData = sessionObj;
+			//console.log("Socket user data = ", userData);
+			next();	
+		} catch (e) {
+			console.log(e)
+			next({ error : "Invalid socket request"})
+			return ;
+		}
+	})
+	
+	io.on('connection', (socket) => {
+		//console.log('a user connected');
+		let userId = socket.userData && socket.userData.userId;
+		let socketId = socket.id;
+		socket.join(userId);
+		socket.on('disconnect', () => {
+			//console.log('user disconnected');
+			socket.leave(userId);
+			channelController.setLastSeenOnSocketDisconnection({userId, socketId})
+		});
+		socketRoutes(socket, io);
+		
+	});
 	
 });
+
 
 app.use(middelwares.session.populateSession);
 

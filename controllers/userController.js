@@ -7,6 +7,7 @@ dayjs.extend(require('dayjs/plugin/utc'))
 dayjs.extend(require('dayjs/plugin/timezone'));
 
 const postgres = require("../config/postgres");
+const {pool} = postgres;
 const {userModel, channelModel} = require('../models');
 
 const redisService = require('../services/redisService');
@@ -356,6 +357,28 @@ const validateResetPasswordToken = async (token) => {
     return userId;
 }
 
+
+const userDetails = async function(userId){
+    let q, res;
+    try {
+        if ( ! userId )     throw new Error("UserId is null");
+        q = `SELECT * \
+            FROM users \
+            WHERE id = '${userId}' \
+        `;
+        res = await pool.query(q);
+        if(!res){
+            throw new Error("User not found in Database");
+        }
+
+        return res.rows[0];
+    } catch (error) {
+        console.log("Failed query = ", q);
+        console.log("Error = ", error);
+        throw error;
+    }
+}
+
 module.exports = {
     addUsers,
     isUserExist,
@@ -367,4 +390,7 @@ module.exports = {
     updateUserProfile,
     forgotPassword,
     validateResetPasswordToken,
+    //Edited
+    userDetails,  
+    //end
 }

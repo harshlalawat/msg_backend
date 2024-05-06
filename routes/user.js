@@ -79,7 +79,8 @@ router.post('/getUsersData', async (req, res) => {
   try {
     const {prefix} = req.body;
     const userData = await userController.isUserExist({email: prefix});
-    if (!userData) throw new Error(libs.messages.errorMessage.userNotFound);
+    // if (!userData) throw new Error(libs.messages.errorMessage.userNotFound);
+    if (!userData) return res.json({message: libs.messages.errorMessage.userNotFound});
     return res.json({usersData: [{_id: userData.id, email: userData.email}]});
   } catch (error) {
     console.log("Error in getttinguserData", error);

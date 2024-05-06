@@ -5,26 +5,103 @@ const workspaceNotificationSettingsController = require('../controllers/workspac
 
 const libs = require('../lib');
 
+/**
+ * @swagger
+ * tags:
+ *   name: workspace
+ *   description: The workspace handling API
+ */
+
+/**
+ * @swagger
+ * /workspace/createWorkspace:
+ *   post:
+ *     summary: creates a new workspace
+ *     tags: [workspace]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: The name of the workspace.
+ *                 example: Workspace1
+ *               userIdsToAdd:
+ *                 type: object(basically an array)
+ *                 description: The array of user ids to add.
+ *                 example: [5c7ccd70-c90e-402f-8b23-c5909ba30614]
+ *     responses:
+ *       201:
+ *         description: The workspace created successfully
+ *         content:
+ *           application/json:
+ *             type: object
+ *             properties:
+ *               workspaceId:
+ *                 type: string
+ *                 description: The id of the newly created workspace
+ *                 example: 5c7ccd70-c90e-402f-8b23-c5909ba30614
+ */
+
 /*
-  Input Body -
-      name: String
-      type: Number
-      courseId: ObjectId(String)  (if type is of course than this field is mandatory)
+Input Body -
+name: String
+type: Number
+courseId: ObjectId(String)  (if type is of course than this field is mandatory)
 */
+
 router.post('/createWorkspace', async (req, res) => {
     try {
-        let obj = await workspaceController.createWorkSpace({...req.body, userId: req.session.userId});
-        res.json(obj || {});        
+      let obj = await workspaceController.createWorkSpace({...req.body, userId: req.session.userId});
+      res.json(obj || {});        
     } catch (error) {
       console.log("Error in createWorkspace. Error = ", error);
       res.json({'error': error.message});  
     }
-});
+  });
+  
+  
+/**
+ * @swagger
+ * /workspace/editWorkspace:
+ *   post:
+ *     summary: Edit the previously created workspace
+ *     tags: [workspace]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               workspaceId:
+ *                 type: string
+ *                 description: The id of the workspace that is being edited.
+ *                 example: 5c7ccd70-c90e-402f-8b23-c5909ba30614
+ *               name:
+ *                 type: string
+ *                 description: The name of the workspace.
+ *                 example: Workspace1
+ *     responses:
+ *       200:
+ *         description: The workspace edited successfully
+ *         content:
+ *           application/json:
+ *             type: object
+ *             properties:
+ *               workspaceId:
+ *                 type: string
+ *                 description: The id of the updated workspace
+ *                 example: 5c7ccd70-c90e-402f-8b23-c5909ba30614
+*/
 
 /*
-  Input Body -
-      workSpaceId: UUID(String),
-      name: String
+Input Body -
+workSpaceId: UUID(String),
+name: String
 */
 router.post('/editWorkspace', async (req, res) => {
   try {
@@ -35,6 +112,37 @@ router.post('/editWorkspace', async (req, res) => {
     res.json({'error': error.message});  
   }
 });
+
+
+/**
+ * @swagger
+ * /workspace/deleteWorkspace:
+ *   post:
+ *     summary: Delete the previously created workspace
+ *     tags: [workspace]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               workspaceId:
+ *                 type: string
+ *                 description: The id of the workspace that is being deleted.
+ *                 example: 5c7ccd70-c90e-402f-8b23-c5909ba30614
+ *     responses:
+ *       200:
+ *         description: The workspace deleted successfully
+ *         content:
+ *           application/json:
+ *             type: object
+ *             properties:
+ *               workspaceId:
+ *                 type: string
+ *                 description: The id of the deleted workspace
+ *                 example: 5c7ccd70-c90e-402f-8b23-c5909ba30614
+*/
 
 /*
   Input Body -

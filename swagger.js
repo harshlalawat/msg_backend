@@ -6,6 +6,7 @@ const router = require('express').Router();
 /** @type {swaggerJsDoc.Options} */
 let options = {
     definition: {
+        openapi: "3.0.0",
         info: {
             title: 'CQ Discussion',
             version: '1.0.0',
@@ -22,7 +23,7 @@ let options = {
             },
         ],
     },
-    apis: ['./routes/*/*.js'],
+    apis: ['./routes/*.js', './routes/*/*.js'],
 }
 
 const swaggerSpec = swaggerJsDoc(options);

@@ -3,9 +3,37 @@ const {redisService} = require("../services");
 const {constants, utils} = require('../lib');
 const {redisKeys} = constants;
 
+const featuresOfDisableGroup = {'joinWorkspace':true, 'leaveWorkspace':true, 'joinChannel':true, 'leaveChannel':true};
+    
 module.exports = function(socket, io) {
     socket.on('hello', (data) => {
         console.log("Socket hello");
+    })
+
+    socket.use(async function(socket, next){
+        // console.log(socket);
+        const rqst = socket[0];
+        if(rqst in featuresOfDisableGroup){
+            next();
+        }else{
+            let channelId = socket[1]?.channelId;
+            let msgObject = await redisService.redis('get', channelId);
+            if(msgObject){
+                if(msgObject === "Disable"){
+                    next(new Error("Channel is deleted"));
+                }else{
+                    next();
+                }
+            }else{
+                let msgObj = await channelController.getChannelStatus(channelId);
+                if( msgObj.msg === "Disable" ){
+                    redisService.redis('setex', channelId, constants.rediskeyExpiryTimesInSec.userDataHash, "Disable");
+                    next(new Error("Channel is deleted"));
+                } else{
+                    next();
+                } 
+            }
+        }
     })
 
     socket.on('joinWorkspace', async (payload, ack) => {

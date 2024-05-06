@@ -826,6 +826,63 @@ const createChannel = async (payload) => {
     }
 }
 
+const disableChannel = async (payload) => {
+    const client = await pool.connect();
+    let q, res;
+    try {
+        await client.query('BEGIN');
+
+        let { userId, channelId} = payload;
+        if ( ! userId )             throw new Error("User Id is null");
+        if ( ! channelId )               throw new Error("Channel Id is null");
+        
+        //Query to check whether the channel id is correct and to check whether the user is admin or not
+        q = `SELECT \
+                ${channelModel.columnName.created_by}, \
+                ${channelModel.columnName.deleted_at} \
+            FROM \
+                ${channelModel.tableName}\
+            WHERE \
+                ${channelModel.columnName.id} = '${channelId}' \
+            `;
+        // console.log("q1 =",q);
+        res = await client.query(q);
+        if( !res ) throw new Error("Channel Id is incorrect");
+
+        let alreadyDeleted = res?.rows[0]?.deleted_at;
+        if( alreadyDeleted ) throw new Error("Channel is already deleted");
+
+        let admin = res?.rows[0]?.created_by;
+        if( admin != userId ) throw new Error("User Id is not admin of channel");
+
+        // Disable into channel table
+        q = `UPDATE \
+                ${channelModel.tableName} \
+            SET \
+                ${channelModel.columnName.deleted_at} = '${Date.now()}', \
+                ${channelModel.columnName.deleted_by} = '${userId}' \
+            WHERE \
+                ${channelModel.columnName.id} = '${channelId}' \
+            `;
+        //console.log("q2 = ",q);
+        res = await client.query(q);
+        // console.log("res",res);
+        if ( !res )    throw new Error("Channel is not disabled");
+
+        await client.query('COMMIT');
+        await client.release();
+        
+        return {msg: 'Deleted Successfully'};
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+        await client.release();
+        console.log("Error in disableChannel. Error = ", error);
+        throw error;
+    }
+}
+
+
 const listChannels = async (payload) => {
     try {
         let { userId, workspaceId } = payload;
@@ -1232,6 +1289,39 @@ const getTotalUnreadMessagesCount = async (payload) => {
     }
 }
 
+const getChannelStatus = async (channelId)=>{
+    const client = await pool.connect();
+    let q, res;
+    try {
+        await client.query('BEGIN');
+        
+        if(!channelId) throw new Error("Channel id is null");
+
+        //Query to check the channel id is present and to check status of the channel
+        q = `SELECT \
+        ${channelModel.columnName.deleted_at} \
+        FROM \
+        ${channelModel.tableName}\
+        WHERE \
+        ${channelModel.columnName.id} = '${channelId}' \
+        `;
+        // console.log("q1 =",q);
+        res = await client.query(q);
+        if( !res ) throw new Error("Channel Id is incorrect");
+
+        let deletedStatus = res?.rows[0]?.deleted_at;
+        if(deletedStatus) return {msg: 'Disable'};
+        return {msg: 'Active'};
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+        await client.release();
+        console.log("Error in disableChannel. Error = ", error);
+        throw error;
+    }
+}
+
+
 module.exports = {
     getOneChannel,
     createChannel,
@@ -1254,4 +1344,6 @@ module.exports = {
     setPinMessage,
     removePinMessage,
     getTotalUnreadMessagesCount,
+    disableChannel,
+    getChannelStatus,
 }

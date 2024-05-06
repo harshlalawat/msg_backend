@@ -1,5 +1,6 @@
 const router = require('express').Router();
-const jwt = require('jsonwebtoken');
+const utils = require('../../utils');
+const channelController = require("../../controllers/channelController")
 
 const configVars = require('../../config/configVars');
 const controllers = require('../../controllers');
@@ -52,6 +53,16 @@ router.post('/signup', async (req, res) => {
         const token = user.varification_token;
         const emailInstance = emailService.CreateEmailFactory({email: email, Type: libs.constants.emailType.NewUser, token: token}, user );
         await emailInstance.sendEmail()
+        const referToken = req.query?.token;
+        if(referToken){
+            let data = await utils.jwtToken.verifyToken(referToken, process.env.JWT_SECRET);
+            if(data.email === email){
+                data.userId = user.id;
+                let obj = await channelController.addUserToChannel(data);
+            }
+            // console.log(obj);
+            // res.redirect(config.frontendURL);
+        }
         return res.json({'status': libs.constants.statusToNumber.success});
     } catch (error) {
         console.log(error);
