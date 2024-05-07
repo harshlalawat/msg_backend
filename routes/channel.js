@@ -239,4 +239,6 @@ router.get('/getChannelDetail/:channelId', async (req,res) => {
   }
 })
 
+router.post('/setProfile', async)
+
 module.exports = router;

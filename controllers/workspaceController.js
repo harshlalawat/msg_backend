@@ -381,7 +381,15 @@ const listUserWorkspacesAdvanced = async (payload) => {
                     }
                 }
                 lastActiveChannelLastSeen = channelObj.last_seen;
-                break;
+                // break;
+            }
+            if(channelObj.type === 4){
+                if(channelObj.user_ids[0] === userId){
+                    let userDetail = await userController.userDetails(channelObj.user_ids[1]);
+                    channelObj.name = userDetail['displayname'];
+                }else{
+                    channelObj.name = userController.userDetails(channelObj.user_ids[0]).displayname;
+                }
             }
         }
 
